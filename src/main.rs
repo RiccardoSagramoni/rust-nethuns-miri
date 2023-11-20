@@ -1,19 +1,35 @@
 use std::cell::UnsafeCell;
+use std::fmt::Display;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
+
 #[derive(Debug)]
 struct RecvPacket<'a> {
+    idx: usize,
     status: &'a AtomicBool,
-    #[allow(dead_code)]
     packet: &'a [u8],
+}
+
+impl<'a> Display for RecvPacket<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "idx: {:?}, status: {:?}, packet: {:?}",
+            self.idx,
+            self.status.load(Ordering::Acquire),
+            self.packet
+        )
+    }
 }
 
 impl<'a> Drop for RecvPacket<'_> {
     fn drop(&mut self) {
+        println!("drop packet {}", self.idx);
         self.status.store(false, Ordering::Release);
     }
 }
+
 
 #[derive(Debug)]
 struct RingSlot {
@@ -21,6 +37,7 @@ struct RingSlot {
     packet: Vec<u8>,
     timestamp: Instant,
 }
+
 
 #[derive(Debug)]
 struct Ring {
@@ -30,11 +47,11 @@ struct Ring {
 
 impl Ring {
     fn new() -> Self {
-        let mut slots: Vec<RingSlot> = Vec::with_capacity(10);
+        let mut slots: Vec<RingSlot> = Vec::with_capacity(5);
         for i in 0..slots.capacity() {
             slots.push(RingSlot {
                 status: AtomicBool::new(false),
-                packet: vec![i as u8; 10],
+                packet: vec![i as u8; 5],
                 timestamp: Instant::now(),
             })
         }
@@ -53,9 +70,15 @@ impl Ring {
         self.slots[next_idx].timestamp = Instant::now();
         self.next = (next_idx + 1) % self.slots.len();
         
+        self.slots[next_idx].packet.clear();
+        for i in 0..self.slots[next_idx].packet.capacity() {
+            self.slots[next_idx].packet.push(i as u8);
+        }
+        
         let slot = &self.slots[next_idx];
         
         Some(RecvPacket {
+            idx: next_idx,
             status: &slot.status,
             packet: &slot.packet,
         })
@@ -97,7 +120,9 @@ fn main() {
             }
         }
     }
-    println!("{:?}", v);
+    for i in 0..v.len() {
+        println!("{}", v[i]);
+    }
     v.clear();
     
     loop {
@@ -110,5 +135,7 @@ fn main() {
             }
         }
     }
-    println!("{:?}", v);
+    for i in 0..v.len() {
+        println!("{}", v[i]);
+    }
 }
