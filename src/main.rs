@@ -12,8 +12,8 @@ struct RecvPacket<'a> {
     packet: &'a [u8],
 }
 
-impl<'a> Display for RecvPacket<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for RecvPacket<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
             "idx: {:?}, status: {:?}, packet: {:?}",
@@ -24,7 +24,7 @@ impl<'a> Display for RecvPacket<'_> {
     }
 }
 
-impl<'a> Drop for RecvPacket<'_> {
+impl Drop for RecvPacket<'_> {
     fn drop(&mut self) {
         println!("drop packet {}", self.idx);
         // Set the slot as FREE, since the corresponding RecvPacket
@@ -148,18 +148,11 @@ fn main() {
     
     // Receive as many packets as possible,
     // so that every slot is set as NOT FREE
-    loop {
-        match socket.recv() {
-            Some(packet) => {
-                v.push(packet);
-            }
-            None => {
-                break;
-            }
-        }
+    while let Some(packet) = socket.recv() {
+        v.push(packet);
     }
-    for i in 0..v.len() {
-        println!("{}", v[i]);
+    for pkt in &v {
+        println!("{}", pkt);
     }
     
     // Drop all received packets
@@ -169,17 +162,10 @@ fn main() {
     // so that every slot is set as NOT FREE.
     // If the Drop trait was correctly implemented,
     // this loop should have the same output as the previous.
-    loop {
-        match socket.recv() {
-            Some(packet) => {
-                v.push(packet);
-            }
-            None => {
-                break;
-            }
-        }
+    while let Some(packet) = socket.recv() {
+        v.push(packet);
     }
-    for i in 0..v.len() {
-        println!("{}", v[i]);
+    for pkt in &v {
+        println!("{}", pkt);
     }
 }
