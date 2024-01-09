@@ -50,7 +50,7 @@ struct RingSlot {
 /// 
 /// The ring is implemented as a vector of ring slots
 /// and a index pointing to the next available slot
-/// (slot is available <==> status is true).
+/// (slot is free <==> status is false).
 /// 
 /// The `next` index wrap around when reaching the end
 /// of the vector, in order to simulate a circular queue.
@@ -86,7 +86,7 @@ impl Ring {
             return None;
         }
         
-        // Set the slot as NOT FREE
+        // Set the slot as IN-USE
         self.slots[next_idx].status.store(true, Ordering::Release);
         // Mutate the ring slot to test if it's safe to mutate
         // the socket structure while RecvPacket objects exist
